@@ -1,4 +1,6 @@
 import numpy as np
+
+
 def iterate_minibatches(inputs,targets, batchsize, shuffle=False):
 
     assert len(inputs) == len(targets)
