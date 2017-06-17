@@ -1,3 +1,4 @@
+
 from collections import OrderedDict
 import numpy as np
 import theano
@@ -13,7 +14,7 @@ def get_or_compute_grads(loss_or_grads, params):
     else:
         return theano.grad(loss_or_grads, params)
 
-
+# modified SGD update, for some neccessary update in untied convolution
 def sgd(loss_or_grads, params,special_params,masks, learning_rate):
 
     grads = get_or_compute_grads(loss_or_grads, params)
@@ -28,7 +29,7 @@ def sgd(loss_or_grads, params,special_params,masks, learning_rate):
 
     return updates
 
-
+# modified adam update, for some neccessary update in untied convolution
 def adam(loss_or_grads, params,special_params,masks, learning_rate=0.001, beta1=0.9,
          beta2=0.999, epsilon=1e-8):
     all_grads = get_or_compute_grads(loss_or_grads, params)
