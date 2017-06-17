@@ -11,6 +11,10 @@ import numpy
 import Untied_Conv_Layer as uconv
 import SDenseLayer
 
+
+# The same net in poggio_net.py, but padding is wrote explicitly.
+# This is to deal with some problems involving the warm start initialization of untied convolution
+
 numpy.random.seed(25)
 def build_cnn(input_var):
 
