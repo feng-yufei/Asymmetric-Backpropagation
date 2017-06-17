@@ -48,6 +48,9 @@ class Untied_Conv_Layer(Layer):
             activation = activation + self.b.dimshuffle('x', 0)
         return self.nonlinearity(activation)
 
+    
+# not only untied convolution, but also backpropagate random feed back 
+# Asymmetric untied convolution
 class Untied_Conv_Layer_Random_Feedback(Layer):
 
     def __init__(self, incoming, num_units, W,W_s = init.GlorotUniform(),
@@ -86,6 +89,9 @@ class Untied_Conv_Layer_Random_Feedback(Layer):
             activation = activation + self.b.dimshuffle('x', 0)
         return self.nonlinearity(activation)
 
+    
+# convert a weight of the original convolution to the very large very sparse matrix
+# used in untied convolution
 def Untied_Conv_weight_convert(tied_weight,img_size,stride = 1):
     ipt_channel = tied_weight.shape[1]
     opt_channel = tied_weight.shape[0]
@@ -101,159 +107,5 @@ def Untied_Conv_weight_convert(tied_weight,img_size,stride = 1):
                             np.transpose(tied_weight[j,i,r,:])
     return weight
 
-
-def Untied_Conv_weight_test(shape,img_size,stride = 1):
-    ipt_channel = shape[1]
-    opt_channel = shape[0]
-    filter_width = shape[2]
-    n_filter = img_size - filter_width + 1
-    weight =np.zeros([img_size*img_size*ipt_channel,n_filter*n_filter*opt_channel])
-    for i in range(0,ipt_channel):
-        for j in range(0,opt_channel):
-            for x in range(0,n_filter):
-                for y in range(0,n_filter):
-                    for r in range(0,filter_width):
-                        weight[i*img_size*img_size + (y+r)*img_size+ x + np.array(range(0, filter_width))  ,j*n_filter*n_filter + y*n_filter+ x ] = 1
-
-    return weight
-
-
-
-def conv_output_length(input_length, filter_size, stride, pad=0):
-
-    if input_length is None:
-        return None
-    if pad == 'valid':
-        output_length = input_length - filter_size + 1
-    elif pad == 'full':
-        output_length = input_length + filter_size - 1
-    elif pad == 'same':
-        output_length = input_length
-    elif isinstance(pad, int):
-        output_length = input_length + 2 * pad - filter_size + 1
-    else:
-        raise ValueError('Invalid pad: {0}'.format(pad))
-
-    # This is the integer arithmetic equivalent to
-    # np.ceil(output_length / stride)
-    output_length = (output_length + stride - 1) // stride
-
-    return output_length
-
-class Fix_Conv2DLayer(Layer):
-
-    def __init__(self, incoming, num_filters, filter_size, stride=(1, 1),
-                 pad=0, untie_biases=False,
-                 W=init.GlorotUniform(), b=init.Constant(0.),
-                 nonlinearity=nonlinearities.rectify,
-                 convolution=T.nnet.conv2d, **kwargs):
-        super(Fix_Conv2DLayer, self).__init__(incoming, **kwargs)
-        if nonlinearity is None:
-            self.nonlinearity = nonlinearities.identity
-        else:
-            self.nonlinearity = nonlinearity
-
-        self.num_filters = num_filters
-        self.filter_size = as_tuple(filter_size, 2)
-        self.stride = as_tuple(stride, 2)
-        self.untie_biases = untie_biases
-        self.convolution = convolution
-
-        if pad == 'valid':
-            self.pad = (0, 0)
-        elif pad in ('full', 'same'):
-            self.pad = pad
-        else:
-            self.pad = as_tuple(pad, 2, int)
-
-        self.W = self.add_param(W, self.get_W_shape(), name="W",trainable = False)
-        if b is None:
-            self.b = None
-        else:
-            if self.untie_biases:
-                biases_shape = (num_filters, self.output_shape[2], self.
-                                output_shape[3])
-            else:
-                biases_shape = (num_filters,)
-            self.b = self.add_param(b, biases_shape, name="b",
-                                    regularizable=False)
-
-    def get_W_shape(self):
-        """Get the shape of the weight matrix `W`.
-
-        Returns
-        -------
-        tuple of int
-            The shape of the weight matrix.
-        """
-        num_input_channels = self.input_shape[1]
-        return (self.num_filters, num_input_channels, self.filter_size[0],
-                self.filter_size[1])
-
-    def get_output_shape_for(self, input_shape):
-        pad = self.pad if isinstance(self.pad, tuple) else (self.pad,) * 2
-
-        output_rows = conv_output_length(input_shape[2],
-                                         self.filter_size[0],
-                                         self.stride[0],
-                                         pad[0])
-
-        output_columns = conv_output_length(input_shape[3],
-                                            self.filter_size[1],
-                                            self.stride[1],
-                                            pad[1])
-
-        return (input_shape[0], self.num_filters, output_rows, output_columns)
-
-    def get_output_for(self, input, input_shape=None, **kwargs):
-        # The optional input_shape argument is for when get_output_for is
-        # called directly with a different shape than self.input_shape.
-        if input_shape is None:
-            input_shape = self.input_shape
-
-        if self.stride == (1, 1) and self.pad == 'same':
-            # simulate same convolution by cropping a full convolution
-            conved = self.convolution(input, self.W, subsample=self.stride,
-                                      image_shape=input_shape,
-                                      filter_shape=self.get_W_shape(),
-                                      border_mode='full')
-            shift_x = (self.filter_size[0] - 1) // 2
-            shift_y = (self.filter_size[1] - 1) // 2
-            conved = conved[:, :, shift_x:input.shape[2] + shift_x,
-                            shift_y:input.shape[3] + shift_y]
-        else:
-            # no padding needed, or explicit padding of input needed
-            if self.pad == 'full':
-                border_mode = 'full'
-                pad = [(0, 0), (0, 0)]
-            elif self.pad == 'same':
-                border_mode = 'valid'
-                pad = [(self.filter_size[0] // 2,
-                        (self.filter_size[0] - 1) // 2),
-                       (self.filter_size[1] // 2,
-                        (self.filter_size[1] - 1) // 2)]
-            else:
-                border_mode = 'valid'
-                pad = [(self.pad[0], self.pad[0]), (self.pad[1], self.pad[1])]
-            if pad != [(0, 0), (0, 0)]:
-                input = padding.pad(input, pad, batch_ndim=2)
-                input_shape = (input_shape[0], input_shape[1],
-                               None if input_shape[2] is None else
-                               input_shape[2] + pad[0][0] + pad[0][1],
-                               None if input_shape[3] is None else
-                               input_shape[3] + pad[1][0] + pad[1][1])
-            conved = self.convolution(input, self.W, subsample=self.stride,
-                                      image_shape=input_shape,
-                                      filter_shape=self.get_W_shape(),
-                                      border_mode=border_mode)
-
-        if self.b is None:
-            activation = conved
-        elif self.untie_biases:
-            activation = conved + self.b.dimshuffle('x', 0, 1, 2)
-        else:
-            activation = conved + self.b.dimshuffle('x', 0, 'x', 'x')
-
-        return self.nonlinearity(activation)
 
 
