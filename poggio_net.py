@@ -12,6 +12,11 @@ import Untied_Conv_Layer as uconv
 import SDenseLayer
 
 numpy.random.seed(25)
+
+# this the convolutional neural network from Tomas Poggio(2016)
+# "How Important is Weight Symmetry in Backpropagation?"
+# MIT, center for brains minds and machines
+# This tiny network produces very good result 76% on CIFAR-10
 def build_cnn(input_var):
 
 
@@ -28,25 +33,28 @@ def build_cnn(input_var):
             l_pool_1, num_filters = 64,filter_size = (5,5),pad = "same",
             nonlinearity=lasagne.nonlinearities.rectify,W=lasagne.init.GlorotUniform(),b = None)
 
-    #l_pool_2 = lasagne.layers.Pool2DLayer (l_conv_2, pool_size=(3, 3),stride = 2, pad = (1,1),
-     #                                      mode="average_inc_pad")
-    l_pool_2 = lasagne.layers.MaxPool2DLayer(l_conv_2, pool_size=(3, 3),stride = 2,pad = (1,1))
+    l_pool_2 = lasagne.layers.Pool2DLayer (l_conv_2, pool_size=(3, 3),stride = 2, pad = (1,1),
+                                           mode="average_inc_pad")
+    
+    #l_pool_2 = lasagne.layers.MaxPool2DLayer(l_conv_2, pool_size=(3, 3),stride = 2,pad = (1,1))
 
     l_conv_3 = lasagne.layers.Conv2DLayer(
             l_pool_2, num_filters = 64,filter_size =(5,5) ,
             nonlinearity=lasagne.nonlinearities.rectify,W=lasagne.init.GlorotUniform(),b = None)
 
-    #l_pool_3 = lasagne.layers.Pool2DLayer (l_conv_3, pool_size=(3, 3),stride = 2, pad = (1,1),
-     #                                      mode="average_inc_pad")
-    l_pool_3 = lasagne.layers.MaxPool2DLayer(l_conv_3, pool_size=(3, 3),stride = 2,pad = (1,1))
+    l_pool_3 = lasagne.layers.Pool2DLayer (l_conv_3, pool_size=(3, 3),stride = 2, pad = (1,1),
+                                           mode="average_inc_pad")
+    
+    #l_pool_3 = lasagne.layers.MaxPool2DLayer(l_conv_3, pool_size=(3, 3),stride = 2,pad = (1,1))
 
-    #l_hid_1 = lasagne.layers.DenseLayer(
-    l_hid_1 = SDenseLayer.SDenseLayer(
+    # possibly use asymmetric backpropagation
+    l_hid_1 = lasagne.layers.DenseLayer(
+    #l_hid_1 = SDenseLayer.SDenseLayer(
             l_pool_3,num_units = 128,
             nonlinearity=lasagne.nonlinearities.rectify,b = None)
 
-    #l_out = lasagne.layers.DenseLayer(
-    l_out = SDenseLayer.SDenseLayer(
+    l_out = lasagne.layers.DenseLayer(
+    #l_out = SDenseLayer.SDenseLayer(
             l_hid_1, num_units=10,
             nonlinearity=lasagne.nonlinearities.softmax,b = None)
 
@@ -70,7 +78,9 @@ print("Building model and...")
 
 network = build_cnn(input_var)
 prediction = lasagne.layers.get_output(network)
-y1_hot = Ex.to_one_hot(target_var,10)
+
+# Either hinge loss or crossentropy.
+#y1_hot = Ex.to_one_hot(target_var,10)
 #loss = T.mean(T.mul(y1_hot, T.nnet.relu(1 - prediction )) + 1.0/9*T.mul(1 - y1_hot, T.nnet.relu(1 + prediction )))
 loss = lasagne.objectives.categorical_crossentropy(prediction, target_var)
 loss = loss.mean()
@@ -135,6 +145,7 @@ for epoch in range(num_epochs):
     print("  validation accuracy:\t\t{:.2f} %".format(val_acc / val_batches * 100))
 
 """
+# Saving, potentially for initialization of untied conv 
 params = lasagne.layers.get_all_params(network, trainable=True)
 W1 = params[0].get_value()
 W2 = params[1].get_value()
