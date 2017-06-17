@@ -9,7 +9,9 @@ import tensor_op
 
 
 
-
+# untied convolution, each receptive square have its own weight
+# enormous number of parameters, severe overfitting, however the weight sharing of
+# different location is not biological plausible.
 class Untied_Conv_Layer(Layer):
 
     def __init__(self, incoming, num_units, W,
@@ -38,6 +40,8 @@ class Untied_Conv_Layer(Layer):
             # batch of feature vectors.
             input = input.flatten(2)
 
+        # The untied convolution is implemented by a dot operator
+        # The weight matrix is extremely large, which is computational/memory inefficient.  
         activation = T.dot(input, self.W)
 
         if self.b is not None:
