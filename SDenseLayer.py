@@ -6,7 +6,8 @@ from lasagne.layers.base import Layer
 import tensor_op
 
 
-
+# Layer for asymmetric backpropagation, inherited from lasagne dense layer.
+# the main modification is the tensor operator in theano s_dot, which is a weird matrix dot
 class SDenseLayer(Layer):
 
     def __init__(self, incoming, num_units, W=init.GlorotUniform(),W_s = init.GlorotUniform(),
@@ -36,7 +37,10 @@ class SDenseLayer(Layer):
             # if the input has more than two dimensions, flatten it into a
             # batch of feature vectors.
             input = input.flatten(2)
-
+        
+        # the dot operator's gradient componet is substituted with a new matrix
+        # because biologically the feedback connection and forward connection are not the same one
+        # neural cell cannot know the weight(electric signal through connection path) in the forward path
         activation = tensor_op.s_dot(input, self.W,self.W_s)
 
         if self.b is not None:
