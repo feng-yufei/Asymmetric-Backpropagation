@@ -12,6 +12,7 @@ import numpy
 #import SDenseLayer
 
 numpy.random.seed(25)
+
 def build_cnn(input_var):
 
 
@@ -23,7 +24,6 @@ def build_cnn(input_var):
             nonlinearity=lasagne.nonlinearities.rectify,W=lasagne.init.GlorotUniform(),b = None)
 
     l_pool_1 = lasagne.layers.MaxPool2DLayer(l_conv_1, pool_size=(2, 2),stride = 2)
-    #l_pool_1 = l_conv_1
 
     l_conv_2 = lasagne.layers.Conv2DLayer(
             l_pool_1, num_filters = 64,filter_size = (5,5),
@@ -36,6 +36,7 @@ def build_cnn(input_var):
             nonlinearity=lasagne.nonlinearities.rectify,W=lasagne.init.GlorotUniform(),b = None)
 
     l_hid_1 = lasagne.layers.DenseLayer(
+    # possibly using asymmetric backprop(random feedback)
     #l_hid_1 = SDenseLayer.SDenseLayer(
             l_conv_3,num_units = 512,
             nonlinearity=lasagne.nonlinearities.rectify,b = None)
@@ -64,10 +65,10 @@ print("Building model and...")
 
 network = build_cnn(input_var)
 prediction = lasagne.layers.get_output(network)
-y1_hot = Ex.to_one_hot(target_var,10)
-loss = T.mean(T.mul(y1_hot, T.nnet.relu(1 - prediction )) + 1.0/9*T.mul(1 - y1_hot, T.nnet.relu(1 + prediction )))
-#loss = lasagne.objectives.categorical_crossentropy(prediction, target_var)
-#loss = loss.mean()
+#y1_hot = Ex.to_one_hot(target_var,10)
+#loss = T.mean(T.mul(y1_hot, T.nnet.relu(1 - prediction )) + 1.0/9*T.mul(1 - y1_hot, T.nnet.relu(1 + prediction )))
+loss = lasagne.objectives.categorical_crossentropy(prediction, target_var)
+loss = loss.mean()
 
 # Get network params, with specifications of manually updated ones
 params = lasagne.layers.get_all_params(network, trainable=True)
@@ -75,10 +76,10 @@ updates = lasagne.updates.sgd(loss,params,learning_rate=0.01)
 #updates = lasagne.updates.adam(loss,params)
 
 test_prediction = lasagne.layers.get_output(network, deterministic=True)
-y1_hot_t = Ex.to_one_hot(target_var,10)
-test_loss = T.mean(T.mul(y1_hot_t, T.nnet.relu(1 - test_prediction)) + 1.0/9*T.mul(1 - y1_hot_t, T.nnet.relu(1 + test_prediction)))
-#test_loss = lasagne.objectives.categorical_crossentropy(test_prediction, target_var)
-#test_loss = test_loss.mean()
+#y1_hot_t = Ex.to_one_hot(target_var,10)
+#test_loss = T.mean(T.mul(y1_hot_t, T.nnet.relu(1 - test_prediction)) + 1.0/9*T.mul(1 - y1_hot_t, T.nnet.relu(1 + test_prediction)))
+test_loss = lasagne.objectives.categorical_crossentropy(test_prediction, target_var)
+test_loss = test_loss.mean()
 test_acc = T.mean(T.eq(T.argmax(test_prediction, axis=1), target_var),dtype=theano.config.floatX)
 
 # Compile theano function computing the training validation loss and accuracy:
@@ -88,7 +89,7 @@ val_fn = theano.function([input_var, target_var], [test_loss, test_acc])
 
 # The training loop
 print("Starting training...")
-num_epochs = 5
+num_epochs = 100
 for epoch in range(num_epochs):
 
     # In each epoch, we do a full pass over the training data:
@@ -128,16 +129,18 @@ for epoch in range(num_epochs):
     print("  validation accuracy:\t\t{:.2f} %".format(val_acc / val_batches * 100))
 
 
+"""
 params = lasagne.layers.get_all_params(network, trainable=True)
 W1 = params[0].get_value()
 W2 = params[1].get_value()
 W3 = params[2].get_value()
+# convert to a large matrix used for weight in untied convolution
 W2 = uconv.Untied_Conv_weight_convert(W2,16)
 W3 = uconv.Untied_Conv_weight_convert(W3,6)
 numpy.savez('E:\PyCharm Project\RandBackProp\Save\conv_1_weight.npz',W1 = W1)
 numpy.savez('E:\PyCharm Project\RandBackProp\Save\conv_2_weight.npz',W2 = W2)
 numpy.savez('E:\PyCharm Project\RandBackProp\Save\conv_3_weight.npz',W3 = W3)
 print("::Saved::")
-
+"""
 
 
