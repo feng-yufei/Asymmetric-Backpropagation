@@ -15,6 +15,8 @@ import SDenseLayer
 
 
 numpy.random.seed(25)
+
+# Network that use untied conv layers.
 def build_cnn(input_var,pass_weight):
 
 
@@ -84,12 +86,16 @@ y_val = y_val.astype(numpy.int32)
 X_test = X_val
 y_test = y_val
 
+
+# Weight for untied conv should be initialized and converted to a compatible matrix
 W1 = numpy.array(numpy.load('./neural/Save/conv_1_weight.npz',)['W1']).astype(numpy.float32)
 W2 = numpy.array(numpy.load('./neural/Save/conv_2_weight.npz',)['W2']).astype(numpy.float32)
 W3 = numpy.array(numpy.load('./neural/Save/conv_3_weight.npz',)['W3']).astype(numpy.float32)
 print(W1.shape)
 print(W2.shape)
 print(W3.shape)
+
+# mask is used to ensure that some entries are always 0, as in the convolution
 mask_1 = theano.shared(numpy.array(1.0*(W1!=0)).astype(numpy.float32))
 mask_2 = theano.shared(numpy.array(1.0*(W2!=0)).astype(numpy.float32))
 mask_3 = theano.shared(numpy.array(1.0*(W3!=0)).astype(numpy.float32))
@@ -173,15 +179,4 @@ for epoch in range(num_epochs):
     print("  validation loss:\t\t{:.6f}".format(val_err / val_batches))
     print("  validation accuracy:\t\t{:.2f} %".format(val_acc / val_batches * 100))
 
-"""
-params = lasagne.layers.get_all_params(network, trainable=True)
-W1 = params[0].get_value()
-W2 = params[1].get_value()
-W3 = params[2].get_value()
-W2 = uconv.Untied_Conv_weight_convert(W2,16)
-W3 = uconv.Untied_Conv_weight_convert(W3,6)
-numpy.savez('E:\PyCharm Project\RandBackProp\Save\conv_1_weight.npz',W1 = W1)
-numpy.savez('E:\PyCharm Project\RandBackProp\Save\conv_2_weight.npz',W2 = W2)
-numpy.savez('E:\PyCharm Project\RandBackProp\Save\conv_3_weight.npz',W3 = W3)
-print("::Saved::")
-"""
+
