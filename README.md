@@ -1,4 +1,4 @@
-# Asymmetric-Backpropagation
+# Asymmetric Backpropagation, A Biological Plausible Network
 
 Back propagation, which is based on chain rule of derivatives, is mathematically sound, but not biologically.  
 The gradient, viewed in math, is very natural following the gradient formula. However, when some people want to view
