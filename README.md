@@ -18,7 +18,9 @@ What? NIPS paper on this? MIT Lab on this? It seems that some people really want
 
 ## Quick Summary Of Simple Math inside
 
-Let 
+Let h_i denote the activation value of layer i,  f denote the nonlinearity, J denote the loss function, and the dot circle denote the elementwise multiplication:
+![Math for asymmetric backpropagation](/Readme/asym.jpg)
+Format: ![Alt Text](url)
 
 ### Prerequisites
 
