@@ -155,6 +155,7 @@ for epoch in range(num_epochs):
         train_batches += 1
 
 
+        
     # And a full pass over the validation data:
     val_err = 0
     val_acc = 0
